@@ -1,4 +1,5 @@
 import jax.numpy as np
+import numpy as onp
 from jax import random
 from dataset import Sinusoids
 from utils import initialize_parameters, mse_loss
@@ -34,7 +35,7 @@ def train(seed, epochs, n_inp, n_rec, n_out, tau_rec, tau_out,
             loss   = yhat-y # Going with the derivative of (yhat-y)^2
             grads  = lsnn.acc_gradient(loss, traces, reg_term, theta)
             theta  = lsnn.upd_weights(theta, grads)
-            loss_arr.append(mse_loss(yhat,y))
+            loss_arr.append(mse_loss(yhat, y))
 
         if epoch%10 == 0:
             print(f'Epoch: [{epoch}/{epochs}] - MSE Loss: {mse_loss(yhat, y):.4f}')
