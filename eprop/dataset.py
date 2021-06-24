@@ -4,13 +4,13 @@ from torch import nn
 from torch.utils.data import Dataset, DataLoader, random_split
 
 class Sinusoids(Dataset):
-    def __init__(self, seed, seq_length=1000, num_samples=2, num_inputs=80, input_freq=50):
+    def __init__(self, seed, seq_length, num_samples, num_inputs, input_freq=50):
         self.seq_length   = seq_length
         self.num_inputs   = num_inputs
         self.num_samples  = num_samples
         self.freq_list    = torch.tensor([1, 2, 3, 5]) # Hz
         self.dt           = 1e-3 # s
-        self.t            = torch.arange(0, 1, self.dt) # s
+        self.t            = torch.arange(0, seq_length*self.dt, self.dt) # s
         self.inp_freq     = input_freq
 
         # Fix seeds
