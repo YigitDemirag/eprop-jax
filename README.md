@@ -1,6 +1,6 @@
 # eprop-jax
 
-A JAX re-implementation of [e-prop](https://www.nature.com/articles/s41467-020-17236-y) algorithm. eprop-jax is written to be simple, clean and fast.
+A [JAX](https://github.com/google/jax) re-implementation of [e-prop](https://www.nature.com/articles/s41467-020-17236-y) algorithm. eprop-jax is written to be simple, clean and fast.
 I tried to replicate the pattern generation task in `eprop/dataset.py`, as described in the paper. And the implementation `eprop/model.py` includes only Leaky Integrate-and-Fire (LIF) neurons.
 
 ### Example Usage
