@@ -1,42 +1,33 @@
-import jax.numpy as np
-import numpy as onp
 from jax import random
 from dataset import Sinusoids
 from utils import initialize_parameters, mse_loss
-from torch.utils.data import Dataset, DataLoader, random_split
-from eprop import LSNN
+from model import SRNN
 
 def train(seed, epochs, n_inp, n_rec, n_out, tau_rec, tau_out, 
           lr_inp, lr_rec, lr_out, w_gain, thr, n_t, gamma, reg, f0, dt):
     
-    # Deterministic JAX 
+    # deterministic JAX 
     key = random.PRNGKey(seed)
 
-    # Create dataset
-    sinusoid_dataset = Sinusoids(seed, seq_length=n_t, num_samples=5, num_inputs=n_inp, input_freq=50)
-    train_size   = int(len(sinusoid_dataset) * 0.5)
-    train_set, _ = random_split(sinusoid_dataset, [train_size, len(sinusoid_dataset)-train_size])
-    train_data   = DataLoader(train_set, 1, shuffle=True)
-
-    # Create network
+    # create dataset
+    toy_dataset = Sinusoids(key, seq_length=n_t, num_samples=4, num_inputs=n_inp, input_freq=50)
+    
+    # create network
     theta = initialize_parameters(key, n_inp, n_rec, n_out, w_gain)
-    lsnn =  LSNN(n_inp, n_rec, n_out, tau_rec, tau_out, thr,
+    srnn =  SRNN(n_inp, n_rec, n_out, tau_rec, tau_out, thr,
                  gamma, lr_inp, lr_rec, lr_out, n_t, reg, f0, dt)
     
-    # Train
+    # train
     loss_arr = []
-    fr_arr   = []
     for epoch in range(epochs):
-        for _, (x, y) in enumerate(train_data):
-            x = np.array(onp.array(x.squeeze(0)))        
-            y = np.array(onp.array(y.permute(1,0)))
+        for x,y in zip(toy_dataset.x, toy_dataset.y):
 
-            yhat, traces, reg_term = lsnn.forward(theta, x)
-            loss   = yhat-y # Going with the derivative of (yhat-y)^2
-            grads  = lsnn.acc_gradient(loss, traces, reg_term, theta)
-            theta  = lsnn.upd_weights(theta, grads)
-            loss_arr.append(mse_loss(yhat, y))
-
+            yhat, traces, reg_term = srnn.forward(theta, x)
+            loss   = yhat-y # Scaled derivative of (yhat-y)^2
+            grads  = srnn.acc_gradient(loss, traces, reg_term, theta)
+            theta  = srnn.upd_weights(theta, grads)
+        
+        loss_arr.append(mse_loss(yhat, y))
         if epoch%10 == 0:
             print(f'Epoch: [{epoch}/{epochs}] - MSE Loss: {mse_loss(yhat, y):.4f}')
 

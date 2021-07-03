@@ -1,14 +1,22 @@
+"""
+This class implements e-prop paper using LIF neurons
+
+Paper:  Bellec, G. et al. A solution to the learning dilemma for 
+        recurrent networks of spiking neurons. Nat Commun 11, 3625 (2020).
+
+Author: Yigit Demirag, Institute of Neuroinformatics, UZH and ETH Zurich.
+"""
+
 from functools import partial
-
 from einops import rearrange, reduce, repeat
-
 import jax.numpy as np
 from jax.lax import scan
 from jax import grad, jit, vmap
 from jax.ops import index, index_add, index_update
 from jax.scipy.signal import correlate
 
-class LSNN():
+class SRNN():
+    """ A spiking recurrent neural network (SRNN) and e-prop learning rule."""
     def __init__(self, n_inp, n_rec, n_out, tau_rec, tau_out, thr,
                  gamma, lr_inp, lr_rec, lr_out, n_t, reg, f0, dt):
       
@@ -27,25 +35,25 @@ class LSNN():
         self.alpha  = np.exp(-dt/tau_rec)
         self.kappa  = np.exp(-dt/tau_out)
        
-        # Pre-comp
-        self.alpha_conv = np.array([self.alpha ** (self.n_t - i - 1) for i in range(self.n_t)]).astype(float) # 1, 1, n_t
-        self.kappa_conv = np.array([self.kappa ** (self.n_t - i - 1) for i in range(self.n_t)]).astype(float) # 1, 1, n_t
+        # pre-comp
+        self.alpha_conv = np.array([self.alpha ** (self.n_t - i - 1) for i in range(self.n_t)]).astype(np.float32) 
+        self.kappa_conv = np.array([self.kappa ** (self.n_t - i - 1) for i in range(self.n_t)]).astype(np.float32)
 
     @partial(jit, static_argnums=(0,))
     def calc_inp_trace(self, x, h):
-        ''' Optimal implementation of e-trace per inp
-            correlate in JAX/scipy is conv1d in PyTorch/TF.
+        ''' Optimal implementation of pre-synaptic e-trace 
+            correlate() in JAX/scipy is conv1d() in PyTorch/TF.
             See https://discuss.pytorch.org/t/numpy-convolve-and-conv1d-in-pytorch/12172/4
         '''
-        trace_in = repeat(vmap(correlate, in_axes=(0, None))(x, self.alpha_conv)[:,0:self.n_t], 'i t -> r i t', r=self.n_rec) # in, t
-        trace_in = np.einsum('tr,rit->rit', h, trace_in)  # n_r, inp_dim, n_t
+        trace_in = repeat(vmap(correlate, in_axes=(0, None))(x, self.alpha_conv)[:,0:self.n_t], 'i t -> r i t', r=self.n_rec)
+        trace_in = np.einsum('tr,rit->rit', h, trace_in)
         trace_in = vmap(correlate, in_axes=(0, None))(trace_in.reshape(self.n_inp*self.n_rec, self.n_t), self.kappa_conv)[:,0:self.n_t].reshape(self.n_rec, self.n_inp, self.n_t)
         return trace_in
 
     @partial(jit, static_argnums=(0,))
     def calc_rec_trace(self, z, h):
-        trace_rec = repeat(vmap(correlate, in_axes=(0, None))(z.T, self.alpha_conv)[:,0:self.n_t], 'i t -> r i t', r=self.n_rec) # in, t
-        trace_rec = np.einsum('tr,rit->rit', h, trace_rec) # n_r, inp_dim, n_t
+        trace_rec = repeat(vmap(correlate, in_axes=(0, None))(z.T, self.alpha_conv)[:,0:self.n_t], 'i t -> r i t', r=self.n_rec)
+        trace_rec = np.einsum('tr,rit->rit', h, trace_rec)
         trace_rec = vmap(correlate, in_axes=(0, None))(trace_rec.reshape(self.n_rec*self.n_rec, self.n_t), self.kappa_conv)[:,0:self.n_t].reshape(self.n_rec, self.n_rec, self.n_t)
         return trace_rec
 
@@ -88,16 +96,16 @@ class LSNN():
 
         _, (v,z,vo) = scan(f, [np.zeros((self.n_rec)), np.zeros((self.n_rec)), np.zeros((self.n_out)), False], x.T)
 
-        # Pseudo-derivative
-        h = self.pseudo_der(v) # nt, nb, nrec
+        # pseudo-derivative
+        h = self.pseudo_der(v)
 
-        # E-trace calculation
+        # e-trace calculation
         traces = {}
         traces['inp'] = self.calc_inp_trace(x, h)
         traces['rec'] = self.calc_rec_trace(z, h)
         traces['out'] = self.calc_out_trace(z)
         
-        # Calc firing rate
+        # calculate firing rate
         reg_term = self.calc_fr(z)
         return vo, traces, reg_term
     
