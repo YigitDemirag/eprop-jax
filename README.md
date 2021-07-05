@@ -25,7 +25,7 @@ Epoch: [90/100] - MSE Loss: 0.0217
 
 ### Acknowledgement
 
-This code is inspired from the PyTorch implementation of e-prop by [Charlotte Frenkel](https://github.com/ChFrenkel)
+This code is inspired from the PyTorch implementation of e-prop by [Charlotte Frenkel](https://github.com/ChFrenkel).
 
 ### License
 
