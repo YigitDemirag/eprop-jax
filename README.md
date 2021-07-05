@@ -5,7 +5,7 @@ I tried to replicate the pattern generation task in `eprop/dataset.py`, as descr
 
 ### Example Usage
 
-Since the implementation is JIT compiled, I suggest doing experimentation/modifications on a Jupyter notebook e.g. `regression_task.py`, to avoid XLA compilation at every run.
+Since the implementation is JIT compiled, I suggest doing experimentation/modifications on a Jupyter notebook e.g. `regression_task.ipynb`, to avoid XLA compilation at every run.
 
 It's just enough to run `python eprop/train.py` to test the network with default hyperparameters. 
 
